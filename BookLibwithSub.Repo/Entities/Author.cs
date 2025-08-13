@@ -8,9 +8,7 @@ namespace BookLibwithSub.Repo.Entities;
 public class Author
 {
     public int Id { get; set; }
-    public string Name { get; set; } = default!;
+    public string Name { get; set; } = string.Empty;
 
-    // Nav
     public ICollection<BookAuthor> BookAuthors { get; set; } = new List<BookAuthor>();
 }
-

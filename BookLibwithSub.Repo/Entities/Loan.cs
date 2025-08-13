@@ -4,18 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 namespace BookLibwithSub.Repo.Entities;
-
 public class Loan
 {
     public int Id { get; set; }
-
     public int MemberId { get; set; }
     public DateTime LoanDate { get; set; }
     public DateTime DueDate { get; set; }
-    public string Status { get; set; } = "Open"; // Open/Closed/Overdue
+    public string Status { get; set; } = "Open";
 
-    // Nav
-    public Member Member { get; set; } = default!;
+    public Member? Member { get; set; }
     public ICollection<LoanItem> Items { get; set; } = new List<LoanItem>();
 }
-
