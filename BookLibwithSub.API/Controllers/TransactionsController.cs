@@ -27,6 +27,26 @@ namespace BookLibwithSub.API.Controllers
             var transactions = await _transactionService.GetUserTransactionsAsync(userId);
             return Ok(transactions);
         }
+
+        [HttpGet("all")]
+        [Authorize(Roles = Roles.Admin)]
+        public async Task<IActionResult> GetAll()
+        {
+            var transactions = await _transactionService.GetAllTransactionsAsync();
+            return Ok(transactions);
+        }
+
+        [HttpGet("{id:int}")]
+        [Authorize(Roles = Roles.Admin)]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var transaction = await _transactionService.GetTransactionByIdAsync(id);
+            if (transaction == null)
+            {
+                return NotFound();
+            }
+            return Ok(transaction);
+        }
     }
 }
 

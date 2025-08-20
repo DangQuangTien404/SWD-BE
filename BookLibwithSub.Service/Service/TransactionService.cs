@@ -19,6 +19,16 @@ namespace BookLibwithSub.Service.Service
         {
             return await _transactionRepo.GetByUserAsync(userId);
         }
+
+        public async Task<IEnumerable<Transaction>> GetAllTransactionsAsync()
+        {
+            return await _transactionRepo.GetAllAsync();
+        }
+
+        public async Task<Transaction?> GetTransactionByIdAsync(int id)
+        {
+            return await _transactionRepo.GetByIdAsync(id);
+        }
     }
 }
 

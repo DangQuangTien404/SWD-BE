@@ -10,5 +10,6 @@ namespace BookLibwithSub.Repo.Interfaces
         Task<Transaction?> GetByIdAsync(int id);
         Task UpdateAsync(Transaction transaction);
         Task<List<Transaction>> GetByUserAsync(int userId);
+        Task<List<Transaction>> GetAllAsync();
     }
 }
