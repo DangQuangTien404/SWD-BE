@@ -12,6 +12,7 @@ namespace BookLibwithSub.Repo.Interfaces
         Task<Loan?> GetByIdAsync(int loanId);
         Task AddItemsAsync(Loan loan, IEnumerable<LoanItem> items);
         Task<LoanItem> ReturnAsync(int loanItemId);
+        Task ExtendLoanAsync(Loan loan, DateTime? newDueDate, int? daysToExtend);
         Task<List<Loan>> GetLoansByUserAsync(int userId);
         Task<List<Loan>> GetActiveLoansByUserAsync(int userId);
     }
