@@ -39,5 +39,12 @@ namespace BookLibwithSub.Repo.repository
                 .OrderByDescending(t => t.TransactionDate)
                 .ToListAsync();
         }
+
+        public async Task<List<Transaction>> GetAllAsync()
+        {
+            return await _context.Transactions
+                .OrderByDescending(t => t.TransactionDate)
+                .ToListAsync();
+        }
     }
 }
