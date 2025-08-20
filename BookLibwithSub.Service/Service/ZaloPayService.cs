@@ -106,9 +106,53 @@ namespace BookLibwithSub.Service.Service
                 return new ZaloPayCallbackResult { Success = false, Message = "Invalid app_trans_id" };
             }
 
+            // Parse additional fields from callback data
+            if (!root.TryGetProperty("amount", out var amountElement) ||
+                !root.TryGetProperty("zp_trans_id", out var zpTransIdElement))
+            {
+                return new ZaloPayCallbackResult { Success = false, Message = "Missing required fields" };
+            }
+
+            var amount = (decimal)amountElement.GetInt64();
+            var zpTransId = zpTransIdElement.GetString() ?? string.Empty;
+
+            // Fetch transaction and ensure the amount matches
+            var transaction = await _transactionRepository.GetByIdAsync(transactionId);
+            if (transaction == null)
+            {
+                return new ZaloPayCallbackResult { Success = false, Message = "Transaction not found" };
+            }
+
+            if (transaction.Amount != amount)
+            {
+                return new ZaloPayCallbackResult { Success = false, Message = "Amount mismatch" };
+            }
+
+            // Determine provider status
+            var status = 0;
+            if (root.TryGetProperty("return_code", out var returnCodeElement))
+            {
+                status = returnCodeElement.GetInt32();
+            }
+            else if (root.TryGetProperty("status", out var statusElement))
+            {
+                status = statusElement.GetInt32();
+            }
+
+            if (status != 1)
+            {
+                return new ZaloPayCallbackResult { Success = false, Message = "Payment not successful" };
+            }
+
             await _paymentService.MarkTransactionPaidAsync(transactionId);
 
-            return new ZaloPayCallbackResult { Success = true, TransactionId = transactionId, Message = "OK" };
+            return new ZaloPayCallbackResult
+            {
+                Success = true,
+                TransactionId = transactionId,
+                ZpTransId = zpTransId,
+                Message = "OK"
+            };
         }
 
         private static string HmacSHA256(string key, string data)
