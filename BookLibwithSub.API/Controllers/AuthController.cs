@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using BookLibwithSub.Service.Interfaces;
 using BookLibwithSub.Service.Models;
 using BookLibwithSub.Service.Models.User;
+using BookLibwithSub.Service.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -78,10 +79,14 @@ namespace BookLibwithSub.API.Controllers
 
 
         [HttpPut("users/{id:int}")]
-        [AllowAnonymous] 
+        [Authorize]
         public async Task<IActionResult> UpdateAccount(int id, [FromBody] UpdateUserRequest request)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var userIdClaim = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+            if (!int.TryParse(userIdClaim, out var userId)) return Unauthorized();
+            if (userId != id && !User.IsInRole(Roles.Admin)) return Forbid();
 
             try
             {
@@ -90,7 +95,6 @@ namespace BookLibwithSub.API.Controllers
             }
             catch (InvalidOperationException ex)
             {
-
                 return NotFound(new { message = ex.Message });
             }
             catch (Exception ex)
@@ -100,9 +104,13 @@ namespace BookLibwithSub.API.Controllers
         }
 
         [HttpDelete("users/{id:int}")]
-        [AllowAnonymous]
+        [Authorize]
         public async Task<IActionResult> DeleteAccount(int id)
         {
+            var userIdClaim = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+            if (!int.TryParse(userIdClaim, out var userId)) return Unauthorized();
+            if (userId != id && !User.IsInRole(Roles.Admin)) return Forbid();
+
             try
             {
                 await _authService.DeleteAccountAsync(id);
