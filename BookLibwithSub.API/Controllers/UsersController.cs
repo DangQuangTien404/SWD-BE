@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using BookLibwithSub.Service.Constants;
@@ -20,6 +21,15 @@ namespace BookLibwithSub.API.Controllers
         {
             var idStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
             return int.TryParse(idStr, out userId);
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(IEnumerable<UserProfileDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAll()
+        {
+            var users = await _userService.GetAllProfilesAsync();
+            return Ok(users);
         }
 
         [HttpGet("me")]

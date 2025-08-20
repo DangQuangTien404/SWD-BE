@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using BookLibwithSub.Repo.Entities;
 using BookLibwithSub.Repo.Interfaces;
@@ -11,6 +12,11 @@ namespace BookLibwithSub.Repo
         public UserRepository(AppDbContext context) => _context = context;
 
         // ---------- READS: No tracking for query-only paths ----------
+        public Task<List<User>> GetAllAsync() =>
+            _context.Users
+                .AsNoTracking()
+                .ToListAsync();
+
         public Task<User?> GetByIdAsync(int userId) =>
             _context.Users
                 .AsNoTracking()
