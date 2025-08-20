@@ -64,13 +64,29 @@ namespace BookLibwithSub.Service.Service
             });
 
             using var response = await _httpClient.PostAsync(_options.CreateOrderUrl, payload);
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"ZaloPay request failed with status code {response.StatusCode}: {error}");
+            }
+
             var json = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<ZaloPayCreateOrderResult>(json, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
 
-            return result ?? new ZaloPayCreateOrderResult { ReturnCode = -1, ReturnMessage = "Invalid response" };
+            if (result == null)
+            {
+                throw new InvalidOperationException("Invalid response from ZaloPay");
+            }
+
+            if (result.ReturnCode != 1)
+            {
+                throw new InvalidOperationException($"ZaloPay returned error {result.ReturnCode}: {result.ReturnMessage}");
+            }
+
+            return result;
         }
 
         public async Task<ZaloPayCallbackResult> HandleCallbackAsync(ZaloPayCallbackRequest request)
