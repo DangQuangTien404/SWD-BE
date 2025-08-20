@@ -1,0 +1,95 @@
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+
+# IDE / tooling
+.vs/
+.idea/
+*.suo
+*.user
+*.rsuser
+*.sln.docstates
+*.DotSettings.user
+*.sln.iml
+
+# Build output (recursive, any depth)
+**/[Bb]in/
+**/[Oo]bj/
+**/[Ll]og/
+**/[Ll]ogs/
+**/out/
+**/app.publish/
+[Tt]est[Rr]esults/
+[Aa]rtifacts/
+
+# Debug symbols & caches
+*.pdb
+*.mdb
+*.ilk
+*.ipdb
+*.iobj
+*.cache
+
+# Configurations
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+
+# NuGet
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.nuget.props
+*.nuget.targets
+*.nupkg
+*.snupkg
+*.nuspec
+.packages/
+packages/
+.nuget/NuGet.Config
+
+# Test/coverage
+*.trx
+*.coverage
+*.coveragexml
+.coverage/
+coverage/
+coverage*.json
+lcov.info
+TestResult.xml
+BenchmarkDotNet.Artifacts/
+
+# VS Code
+.vscode/
+
+# ASP.NET Core
+appsettings.*.Development.json
+appsettings.*.Local.json
+appsettings.*.Secret.json
+secrets.json
+**/Properties/ServiceDependencies/**/
+**/Properties/ServiceSettings/**/
+
+# EF Core
+# (Intentionally keep Migrations/ tracked)
+
+# Front-end (optional)
+node_modules/
+**/node_modules/
+**/wwwroot/lib/
+**/wwwroot/dist/
+**/wwwroot/build/
+**/wwwroot/**/bundles/
+# **/wwwroot/**/*.map  # uncomment if desired
+
+# Containers / misc
+docker-compose.override.yml
+.env
+*.swp
+*.tmp
+*.log
