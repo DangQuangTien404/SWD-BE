@@ -32,6 +32,7 @@ namespace BookLibwithSub.Service.Models
     {
         public bool Success { get; set; }
         public int TransactionId { get; set; }
+        public string ZpTransId { get; set; }
         public string Message { get; set; }
     }
 }
