@@ -44,6 +44,7 @@ namespace BookLibwithSub.Repo.repository
             return await _context.Loans
                 .Include(l => l.Subscription)
                     .ThenInclude(s => s.SubscriptionPlan)
+                .Include(l => l.LoanItems)
                 .FirstOrDefaultAsync(l => l.LoanID == loanId);
         }
 
@@ -104,6 +105,19 @@ namespace BookLibwithSub.Repo.repository
                              l.LoanItems.Any(li => li.Status != "Returned"))
                 .Include(l => l.LoanItems.Where(li => li.Status != "Returned"))
                 .ToListAsync();
+        }
+
+        public async Task ExtendLoanAsync(Loan loan, DateTime? newDueDate, int? daysToExtend)
+        {
+            foreach (var item in loan.LoanItems.Where(li => li.Status != "Returned"))
+            {
+                if (newDueDate.HasValue)
+                    item.DueDate = newDueDate.Value;
+                else if (daysToExtend.HasValue)
+                    item.DueDate = item.DueDate.AddDays(daysToExtend.Value);
+            }
+
+            await _context.SaveChangesAsync();
         }
     }
 }

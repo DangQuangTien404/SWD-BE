@@ -136,6 +136,26 @@ namespace BookLibwithSub.Service.Service
             }
         }
 
+        public async Task<Loan?> GetLoanAsync(int loanId, int userId)
+        {
+            var loan = await _loanRepo.GetByIdAsync(loanId);
+            if (loan == null || loan.Subscription?.UserID != userId)
+                return null;
+            return loan;
+        }
+
+        public async Task ExtendLoanAsync(int loanId, int userId, DateTime? newDueDate, int? daysToExtend)
+        {
+            if (!newDueDate.HasValue && !daysToExtend.HasValue)
+                throw new ArgumentException("Either new due date or days to extend must be provided");
+
+            var loan = await _loanRepo.GetByIdAsync(loanId);
+            if (loan == null || loan.Subscription?.UserID != userId)
+                throw new InvalidOperationException("Loan not found");
+
+            await _loanRepo.ExtendLoanAsync(loan, newDueDate, daysToExtend);
+        }
+
         public async Task<IEnumerable<Loan>> GetLoanHistoryAsync(int userId)
         {
             return await _loanRepo.GetLoansByUserAsync(userId);
