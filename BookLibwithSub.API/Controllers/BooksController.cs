@@ -42,6 +42,18 @@ namespace BookLibwithSub.API.Controllers
             return Ok(ToResponse(book));
         }
 
+        [HttpGet("{id:int}/cover")]
+        [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetCover(int id)
+        {
+            var book = await _service.GetByIdAsync(id);
+            if (book?.CoverImage == null || string.IsNullOrEmpty(book.CoverImageContentType))
+                return NotFound();
+            return File(book.CoverImage, book.CoverImageContentType);
+        }
+
         [HttpGet("by-title")]
         [AllowAnonymous]
         [ProducesResponseType(typeof(BookResponse[]), StatusCodes.Status200OK)]
