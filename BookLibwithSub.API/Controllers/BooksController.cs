@@ -22,6 +22,10 @@ namespace BookLibwithSub.API.Controllers
         private static BookResponse ToResponse(Book b) =>
             new(b.BookID, b.Title, b.AuthorName, b.ISBN, b.Publisher, b.PublishedYear, b.TotalCopies, b.AvailableCopies);
 
+        private static BookDetailResponse ToDetailResponse(Book b) =>
+            new(b.BookID, b.Title, b.AuthorName, b.ISBN, b.Publisher, b.PublishedYear,
+                b.TotalCopies, b.AvailableCopies, b.CoverImage, b.CoverImageContentType);
+
         [HttpGet]
         [AllowAnonymous]
         [ProducesResponseType(typeof(IEnumerable<BookResponse>), StatusCodes.Status200OK)]
@@ -33,25 +37,13 @@ namespace BookLibwithSub.API.Controllers
 
         [HttpGet("{id:int}")]
         [AllowAnonymous]
-        [ProducesResponseType(typeof(BookResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BookDetailResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Get(int id)
         {
             var book = await _service.GetByIdAsync(id);
             if (book == null) return NotFound();
-            return Ok(ToResponse(book));
-        }
-
-        [HttpGet("{id:int}/cover")]
-        [AllowAnonymous]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetCover(int id)
-        {
-            var book = await _service.GetByIdAsync(id);
-            if (book?.CoverImage == null || string.IsNullOrEmpty(book.CoverImageContentType))
-                return NotFound();
-            return File(book.CoverImage, book.CoverImageContentType);
+            return Ok(ToDetailResponse(book));
         }
 
         [HttpGet("by-title")]

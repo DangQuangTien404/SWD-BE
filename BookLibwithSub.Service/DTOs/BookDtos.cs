@@ -62,4 +62,17 @@ namespace BookLibwithSub.Service.Models
         int TotalCopies,
         int AvailableCopies
     );
+
+    public record BookDetailResponse(
+        int BookID,
+        string Title,
+        string AuthorName,
+        string Isbn,
+        string? Publisher,
+        int PublishedYear,
+        int TotalCopies,
+        int AvailableCopies,
+        byte[]? CoverImage,
+        string? CoverImageContentType
+    );
 }
