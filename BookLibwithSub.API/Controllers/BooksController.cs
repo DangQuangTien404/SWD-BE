@@ -1,14 +1,10 @@
-using System;
-using System.IO;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
-using BookLibwithSub.Repo.Entities;
-using BookLibwithSub.Service.Constants;
-using BookLibwithSub.Service.Interfaces;
-using BookLibwithSub.Service.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using BookLibwithSub.Repo.Entities;
+using BookLibwithSub.Service.DTOs;
+using BookLibwithSub.Service.Interfaces;
 
 namespace BookLibwithSub.API.Controllers
 {
@@ -16,145 +12,127 @@ namespace BookLibwithSub.API.Controllers
     [Route("api/[controller]")]
     public class BooksController : ControllerBase
     {
-        private readonly IBookService _service;
-        public BooksController(IBookService service) => _service = service;
+        private readonly IBookService _svc;
 
-        private static BookResponse ToResponse(Book b) =>
-            new(b.BookID, b.Title, b.AuthorName, b.ISBN, b.Publisher, b.PublishedYear, b.TotalCopies, b.AvailableCopies);
+        public BooksController(IBookService svc) => _svc = svc;
 
-        private static BookDetailResponse ToDetailResponse(Book b) =>
-            new(b.BookID, b.Title, b.AuthorName, b.ISBN, b.Publisher, b.PublishedYear,
-                b.TotalCopies, b.AvailableCopies, b.CoverImage, b.CoverImageContentType);
-
-        [HttpGet]
-        [AllowAnonymous]
-        [ProducesResponseType(typeof(IEnumerable<BookResponse>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetAll()
-        {
-            var books = await _service.GetAllAsync();
-            return Ok(books.Select(ToResponse));
-        }
-
-        [HttpGet("{id:int}")]
-        [AllowAnonymous]
-        [ProducesResponseType(typeof(BookDetailResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Get(int id)
-        {
-            var book = await _service.GetByIdAsync(id);
-            if (book == null) return NotFound();
-            return Ok(ToDetailResponse(book));
-        }
-
-        [HttpGet("by-title")]
-        [AllowAnonymous]
-        [ProducesResponseType(typeof(BookResponse[]), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetByTitle([FromQuery] string title)
-        {
-            var (items, _) = await _service.SearchAsync(title, 1, 100);
-            var matches = items
-                .Where(b => string.Equals(b.Title, title, StringComparison.OrdinalIgnoreCase))
-                .Select(ToResponse)
-                .ToArray();
-            return Ok(matches);
-        }
+        // 1) Add new book (image via link)
         [HttpPost]
-        [Authorize(Roles = Roles.Admin)]
-        [Consumes("multipart/form-data")]
-        [ProducesResponseType(typeof(BookResponse), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> Create([FromForm] CreateBookRequest req, IFormFile? cover)
+
+        public async Task<IActionResult> Add([FromBody] BookCreateDto dto)
         {
-            if (!ModelState.IsValid) return ValidationProblem(ModelState);
+            if (dto == null) return BadRequest();
+            if (string.IsNullOrWhiteSpace(dto.Title) ||
+                string.IsNullOrWhiteSpace(dto.AuthorName) ||
+                string.IsNullOrWhiteSpace(dto.ISBN))
+                return BadRequest(new { message = "Title, AuthorName, and ISBN are required." });
 
             var entity = new Book
             {
-                Title = req.Title,
-                AuthorName = req.AuthorName,
-                ISBN = req.Isbn,
-                Publisher = req.Publisher,
-                PublishedYear = req.PublishedYear,
-                TotalCopies = req.TotalCopies,
-                AvailableCopies = req.AvailableCopies
+                Title = dto.Title.Trim(),
+                AuthorName = dto.AuthorName.Trim(),
+                ISBN = dto.ISBN.Trim(),
+                Publisher = dto.Publisher?.Trim(),
+                PublishedYear = dto.PublishedYear,
+                TotalCopies = dto.TotalCopies,
+                AvailableCopies = dto.AvailableCopies,
+                CoverImageUrl = dto.CoverImageUrl?.Trim()
             };
 
-            byte[]? coverBytes = null;
-            string? contentType = null;
-
-            if (cover is not null && cover.Length > 0)
-            {
-                using var ms = new MemoryStream();
-                await cover.CopyToAsync(ms);
-                coverBytes = ms.ToArray();
-                contentType = string.IsNullOrWhiteSpace(cover.ContentType) ? "application/octet-stream" : cover.ContentType;
-            }
-
             try
             {
-                var created = await _service.CreateAsync(entity, coverBytes, contentType);
-
-                return Created($"/api/books/{created.BookID}", ToResponse(created));
+                var created = await _svc.CreateAsync(entity);
+                return CreatedAtAction(nameof(GetById), new { id = created.BookID }, Shape(created));
             }
-            catch (Exception ex)
+            catch (System.InvalidOperationException ex) when (ex.Message.Contains("ISBN"))
             {
-                return Problem(title: "Failed to create book", detail: ex.Message, statusCode: StatusCodes.Status400BadRequest);
+                return Conflict(new { message = ex.Message });
+            }
+            catch (System.InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
 
+        // 2) Change book
         [HttpPut("{id:int}")]
-        [Authorize(Roles = Roles.Admin)]
-        [Consumes("multipart/form-data")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> Update(int id, [FromForm] UpdateBookRequest req, IFormFile? cover)
+
+        public async Task<IActionResult> Change([FromRoute] int id, [FromBody] BookUpdateDto dto)
         {
-            if (!ModelState.IsValid) return ValidationProblem(ModelState);
+            if (dto == null) return BadRequest();
 
-            var existing = await _service.GetByIdAsync(id);
-            if (existing == null) return NotFound();
-
-            existing.Title = req.Title;
-            existing.AuthorName = req.AuthorName;
-            existing.ISBN = req.Isbn;
-            existing.Publisher = req.Publisher;
-            existing.PublishedYear = req.PublishedYear;
-            existing.TotalCopies = req.TotalCopies;
-            existing.AvailableCopies = req.AvailableCopies;
-
-            byte[]? coverBytes = null;
-            string? contentType = null;
-
-            if (cover is not null && cover.Length > 0)
+            var updated = new Book
             {
-                using var ms = new MemoryStream();
-                await cover.CopyToAsync(ms);
-                coverBytes = ms.ToArray();
-                contentType = string.IsNullOrWhiteSpace(cover.ContentType) ? "application/octet-stream" : cover.ContentType;
-            }
+                Title = (dto.Title ?? "").Trim(),
+                AuthorName = (dto.AuthorName ?? "").Trim(),
+                ISBN = (dto.ISBN ?? "").Trim(),
+                Publisher = dto.Publisher?.Trim(),
+                PublishedYear = dto.PublishedYear,
+                TotalCopies = dto.TotalCopies,
+                AvailableCopies = dto.AvailableCopies,
+                CoverImageUrl = dto.CoverImageUrl?.Trim()
+            };
 
             try
             {
-                await _service.UpdateAsync(existing, coverBytes, contentType);
-                return NoContent();
+                var result = await _svc.UpdateAsync(id, updated);
+                if (result == null) return NotFound();
+                return Ok(Shape(result));
             }
-            catch (Exception ex)
+            catch (System.InvalidOperationException ex) when (ex.Message.Contains("ISBN"))
             {
-                return Problem(title: "Failed to update book", detail: ex.Message, statusCode: StatusCodes.Status400BadRequest);
+                return Conflict(new { message = ex.Message });
+            }
+            catch (System.InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
 
-        [HttpDelete("{id:int}")]
-        [Authorize(Roles = Roles.Admin)]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Delete(int id)
+        // 3) Get book by ID
+        [HttpGet("{id:int}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetById([FromRoute] int id)
         {
-            var existing = await _service.GetByIdAsync(id);
-            if (existing == null) return NotFound();
-
-            await _service.DeleteAsync(id);
-            return NoContent();
+            var b = await _svc.GetByIdAsync(id);
+            return b == null ? NotFound() : Ok(Shape(b));
         }
+
+        // 4) Get books sorted by PublishedYear (replaces old "Get all")
+        //    /api/books/sorted?order=asc   (default: desc)
+        [HttpGet("sorted")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetSorted([FromQuery] string? order = "desc")
+        {
+            var items = await _svc.GetAllAsync();
+            var sorted = (order?.ToLowerInvariant() == "asc")
+                ? items.OrderBy(b => b.PublishedYear).ThenBy(b => b.Title)
+                : items.OrderByDescending(b => b.PublishedYear).ThenBy(b => b.Title);
+
+            return Ok(sorted.Select(Shape));
+        }
+
+        // 5) Delete book
+        [HttpDelete("{id:int}")]
+
+        public async Task<IActionResult> Delete([FromRoute] int id)
+        {
+            var ok = await _svc.DeleteAsync(id);
+            return ok ? NoContent() : NotFound();
+        }
+
+        // response shaping
+        private static object Shape(Book b) => new
+        {
+            id = b.BookID,
+            title = b.Title,
+            authorName = b.AuthorName,
+            isbn = b.ISBN,
+            publisher = b.Publisher,
+            publishedYear = b.PublishedYear,
+            totalCopies = b.TotalCopies,
+            availableCopies = b.AvailableCopies,
+            coverImageUrl = b.CoverImageUrl
+        };
     }
 }

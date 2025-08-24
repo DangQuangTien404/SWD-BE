@@ -22,7 +22,6 @@ namespace BookLibwithSub.API.Controllers
             new(p.SubscriptionPlanID, p.PlanName, p.DurationDays, p.MaxPerDay, p.MaxPerMonth, p.Price);
 
         [HttpGet]
-        [Authorize]
         [ProducesResponseType(typeof(IEnumerable<SubscriptionPlanResponse>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll()
         {
@@ -31,7 +30,6 @@ namespace BookLibwithSub.API.Controllers
         }
 
         [HttpGet("{id:int}")]
-        [Authorize]
         [ProducesResponseType(typeof(SubscriptionPlanResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Get(int id)
@@ -42,7 +40,6 @@ namespace BookLibwithSub.API.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = Roles.Admin)]
         [ProducesResponseType(typeof(SubscriptionPlanResponse), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Create([FromBody] CreateSubscriptionPlanRequest req)
@@ -70,7 +67,6 @@ namespace BookLibwithSub.API.Controllers
         }
 
         [HttpPut("{id:int}")]
-        [Authorize(Roles = Roles.Admin)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -99,7 +95,6 @@ namespace BookLibwithSub.API.Controllers
         }
 
         [HttpDelete("{id:int}")]
-        [Authorize(Roles = Roles.Admin)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Delete(int id)

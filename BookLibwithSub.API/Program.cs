@@ -46,12 +46,23 @@ builder.Services.Configure<ZaloPayOptions>(builder.Configuration.GetSection("Zal
 // -------------------- CORS --------------------
 const string CorsPolicy = "AppCors";
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins")
-    .Get<string[]>() ?? new[] { "http://localhost:5173", "http://localhost:3000" };
+    .Get<string[]>() ?? new[]
+{
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://swd392-booklibwithsub-fe.vercel.app"
+};
 
-builder.Services.AddCors(o => o.AddPolicy(
-    CorsPolicy,
-    p => p.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()
-));
+builder.Services.AddCors(o =>
+{
+    o.AddPolicy(CorsPolicy, p =>
+    {
+        p.WithOrigins(allowedOrigins)
+         .AllowAnyHeader()
+         .AllowAnyMethod()
+         .AllowCredentials(); 
+    });
+});
 
 // -------------------- JWT --------------------
 var jwtOptions = new JwtOptions();
@@ -99,7 +110,6 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "BookLibWithSub API", Version = "v1" });
 
-    // Bearer auth in Swagger
     var securityScheme = new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -129,19 +139,26 @@ else
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "BookLibWithSub API v1");
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "BookLibWithSub API v1");
+    });
 });
 
 app.UseHttpsRedirection();
 
+app.UseRouting();
+
 app.UseCors(CorsPolicy);
 
 app.UseAuthentication();
-// If you have this middleware in your project, keep it. If not, remove the next line.
 app.UseMiddleware<TokenValidationMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapMethods("{*path}", new[] { "OPTIONS" }, () => Results.Ok());
+
 app.MapGet("/", () => "BookLibWithSub API is running");
 
 app.Run();

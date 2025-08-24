@@ -1,11 +1,5 @@
-﻿using System;
-using System;
-using System.Collections.Generic;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace BookLibwithSub.Repo.Entities
 {
@@ -19,8 +13,10 @@ namespace BookLibwithSub.Repo.Entities
         public int PublishedYear { get; set; }
         public int TotalCopies { get; set; }
         public int AvailableCopies { get; set; }
-        public byte[]? CoverImage { get; set; }
-        public string? CoverImageContentType { get; set; }
-        [JsonIgnore] public ICollection<LoanItem> LoanItems { get; set; } = new List<LoanItem>();
+
+        public string? CoverImageUrl { get; set; }
+
+        [JsonIgnore]
+        public ICollection<LoanItem> LoanItems { get; set; } = new List<LoanItem>();
     }
 }

@@ -38,11 +38,15 @@ namespace BookLibwithSub.Service.Service
                 throw new InvalidOperationException("Transaction not found");
 
             var appId = _options.AppId;
-            var appTransId = $"{DateTime.UtcNow:yyMMdd}_{transactionId}";
+            var appTransId = $"{DateTime.UtcNow:yyMMdd}_{transactionId}"; 
             var appUser = userId.ToString();
             var amount = (long)transaction.Amount;
             var appTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            var embedData = JsonSerializer.Serialize(new { redirecturl = _options.RedirectUrl });
+
+            var embedData = JsonSerializer.Serialize(new
+            {
+                merchanttxid = transactionId
+            });
             var items = "[]";
 
             var data = $"{appId}|{appTransId}|{appUser}|{amount}|{appTime}|{embedData}|{items}";
@@ -56,37 +60,22 @@ namespace BookLibwithSub.Service.Service
                 new KeyValuePair<string, string>("app_time", appTime.ToString()),
                 new KeyValuePair<string, string>("amount", amount.ToString()),
                 new KeyValuePair<string, string>("callback_url", _options.CallbackUrl ?? string.Empty),
+                new KeyValuePair<string, string>("redirect_url", _options.RedirectUrl ?? string.Empty), 
                 new KeyValuePair<string, string>("embed_data", embedData),
                 new KeyValuePair<string, string>("item", items),
                 new KeyValuePair<string, string>("description", $"Payment for transaction #{transactionId}"),
-                new KeyValuePair<string, string>("bank_code", "zalopayapp"),
                 new KeyValuePair<string, string>("mac", mac)
             });
 
             using var response = await _httpClient.PostAsync(_options.CreateOrderUrl, payload);
-            if (!response.IsSuccessStatusCode)
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                throw new HttpRequestException($"ZaloPay request failed with status code {response.StatusCode}: {error}");
-            }
-
             var json = await response.Content.ReadAsStringAsync();
+
             var result = JsonSerializer.Deserialize<ZaloPayCreateOrderResult>(json, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
 
-            if (result == null)
-            {
-                throw new InvalidOperationException("Invalid response from ZaloPay");
-            }
-
-            if (result.ReturnCode != 1)
-            {
-                throw new InvalidOperationException($"ZaloPay returned error {result.ReturnCode}: {result.ReturnMessage}");
-            }
-
-            return result;
+            return result ?? new ZaloPayCreateOrderResult { ReturnCode = -1, ReturnMessage = "Invalid response" };
         }
 
         public async Task<ZaloPayCallbackResult> HandleCallbackAsync(ZaloPayCallbackRequest request)
@@ -100,7 +89,6 @@ namespace BookLibwithSub.Service.Service
             using var doc = JsonDocument.Parse(request.Data);
             var root = doc.RootElement;
             var appTransId = root.GetProperty("app_trans_id").GetString();
-
             if (string.IsNullOrWhiteSpace(appTransId) || !TryParseTransactionId(appTransId, out var transactionId))
             {
                 return new ZaloPayCallbackResult { Success = false, Message = "Invalid app_trans_id" };
@@ -108,7 +96,12 @@ namespace BookLibwithSub.Service.Service
 
             await _paymentService.MarkTransactionPaidAsync(transactionId);
 
-            return new ZaloPayCallbackResult { Success = true, TransactionId = transactionId, Message = "OK" };
+            return new ZaloPayCallbackResult
+            {
+                Success = true,
+                TransactionId = transactionId,
+                Message = "OK"
+            };
         }
 
         private static string HmacSHA256(string key, string data)
@@ -120,7 +113,6 @@ namespace BookLibwithSub.Service.Service
 
         private static bool TryParseTransactionId(string appTransId, out int transactionId)
         {
-            // format: yyMMdd_transactionId
             transactionId = 0;
             var idx = appTransId.IndexOf('_');
             if (idx <= 0 || idx >= appTransId.Length - 1) return false;
@@ -129,5 +121,3 @@ namespace BookLibwithSub.Service.Service
         }
     }
 }
-
-

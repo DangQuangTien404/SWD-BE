@@ -1,4 +1,6 @@
-﻿using BookLibwithSub.Repo.Entities;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
+using BookLibwithSub.Repo.Entities;
 using BookLibwithSub.Repo.Interfaces;
 using BookLibwithSub.Service.Interfaces;
 
@@ -9,38 +11,58 @@ namespace BookLibwithSub.Service.Service
         private readonly IBookRepository _repo;
         public BookService(IBookRepository repo) => _repo = repo;
 
-        public async Task<IEnumerable<Book>> GetAllAsync()
-        {
-            return await _repo.GetAllAsync();
-        }
-
-        public Task<(IEnumerable<Book> items, int total)> SearchAsync(string? q, int page, int pageSize)
-            => _repo.SearchAsync(q, page, pageSize);
+        public Task<IEnumerable<Book>> GetAllAsync() => _repo.GetAllAsync();
 
         public Task<Book?> GetByIdAsync(int id) => _repo.GetByIdAsync(id);
 
-        public async Task<Book> CreateAsync(Book entity, byte[]? coverBytes, string? contentType)
+        public async Task<Book> CreateAsync(Book entity)
         {
-            if (coverBytes is { Length: > 0 })
-            {
-                entity.CoverImage = coverBytes;
-                entity.CoverImageContentType = string.IsNullOrWhiteSpace(contentType)
-                    ? "application/octet-stream" : contentType;
-            }
-            return await _repo.AddAsync(entity);
+            // business validations
+            if (await _repo.ExistsByIsbnAsync(entity.ISBN))
+                throw new System.InvalidOperationException("ISBN already exists");
+
+            if (entity.TotalCopies < 0 || entity.AvailableCopies < 0 || entity.AvailableCopies > entity.TotalCopies)
+                throw new System.InvalidOperationException("Invalid copies numbers");
+
+            await _repo.AddAsync(entity);
+            await _repo.SaveAsync();
+            return entity;
         }
 
-        public async Task UpdateAsync(Book entity, byte[]? coverBytes, string? contentType)
+        public async Task<Book?> UpdateAsync(int id, Book updated)
         {
-            if (coverBytes is { Length: > 0 })
-            {
-                entity.CoverImage = coverBytes;
-                entity.CoverImageContentType = string.IsNullOrWhiteSpace(contentType)
-                    ? "application/octet-stream" : contentType;
-            }
-            await _repo.UpdateAsync(entity);
+            var existing = await _repo.GetByIdAsync(id);
+            if (existing == null) return null;
+
+            if (!string.Equals(existing.ISBN, updated.ISBN) &&
+                await _repo.ExistsByIsbnAsync(updated.ISBN, excludeId: id))
+                throw new System.InvalidOperationException("ISBN already exists");
+
+            if (updated.TotalCopies < 0 || updated.AvailableCopies < 0 || updated.AvailableCopies > updated.TotalCopies)
+                throw new System.InvalidOperationException("Invalid copies numbers");
+
+            // copy fields
+            existing.Title = updated.Title;
+            existing.AuthorName = updated.AuthorName;
+            existing.ISBN = updated.ISBN;
+            existing.Publisher = updated.Publisher;
+            existing.PublishedYear = updated.PublishedYear;
+            existing.TotalCopies = updated.TotalCopies;
+            existing.AvailableCopies = updated.AvailableCopies;
+            existing.CoverImageUrl = updated.CoverImageUrl; // URL only
+
+            await _repo.UpdateAsync(existing);
+            await _repo.SaveAsync();
+            return existing;
         }
 
-        public Task DeleteAsync(int id) => _repo.DeleteAsync(id);
+        public async Task<bool> DeleteAsync(int id)
+        {
+            var existing = await _repo.GetByIdAsync(id);
+            if (existing == null) return false;
+            await _repo.DeleteAsync(existing);
+            await _repo.SaveAsync();
+            return true;
+        }
     }
 }

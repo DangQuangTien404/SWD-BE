@@ -105,35 +105,22 @@ namespace BookLibwithSub.Repo
 
             modelBuilder.Entity<Book>(entity =>
             {
-                entity.Property(b => b.Title)
-                    .IsRequired()
-                    .HasMaxLength(255);
+                entity.HasKey(b => b.BookID);
+                entity.Property(b => b.BookID).UseIdentityByDefaultColumn(); // PostgreSQL
 
-                entity.Property(b => b.AuthorName)
-                    .IsRequired()
-                    .HasMaxLength(255);
+                entity.Property(b => b.Title).IsRequired().HasMaxLength(255);
+                entity.Property(b => b.AuthorName).IsRequired().HasMaxLength(255);
+                entity.Property(b => b.ISBN).IsRequired().HasMaxLength(20);
+                entity.HasIndex(b => b.ISBN).IsUnique();
 
-                entity.Property(b => b.ISBN)
-                    .IsRequired()
-                    .HasMaxLength(20);
+                entity.Property(b => b.Publisher).HasMaxLength(255);
+                entity.Property(b => b.PublishedYear).IsRequired();
 
-                entity.Property(b => b.CoverImage)
-                      .HasColumnType("bytea");
+                entity.Property(b => b.TotalCopies).IsRequired();
+                entity.Property(b => b.AvailableCopies).IsRequired();
 
-                entity.Property(b => b.CoverImageContentType)
-                       .HasMaxLength(100);
-
-                entity.Property(b => b.Publisher)
-                    .HasMaxLength(255);
-
-                entity.Property(b => b.PublishedYear)
-                    .IsRequired();
-
-                entity.Property(b => b.TotalCopies)
-                    .IsRequired();
-
-                entity.Property(b => b.AvailableCopies)
-                    .IsRequired();
+                // only URL now
+                entity.Property(b => b.CoverImageUrl).HasMaxLength(1000);
 
                 entity.ToTable(t =>
                 {
@@ -141,6 +128,7 @@ namespace BookLibwithSub.Repo
                         "\"TotalCopies\" >= 0 AND \"AvailableCopies\" >= 0 AND \"AvailableCopies\" <= \"TotalCopies\"");
                 });
             });
+
 
             modelBuilder.Entity<Loan>(entity =>
             {
