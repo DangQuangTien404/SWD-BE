@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
+using BookLibwithSub.Repo.Entities;
 using BookLibwithSub.Service.Constants;
 using BookLibwithSub.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -12,102 +13,113 @@ namespace BookLibwithSub.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Authorize(Roles = Roles.User)]
+    [Produces("application/json")]
     public class LoansController : ControllerBase
     {
         private readonly ILoanService _loanService;
-        public LoansController(ILoanService loanService)
-        {
-            _loanService = loanService;
-        }
+        public LoansController(ILoanService loanService) => _loanService = loanService;
 
-        public class BorrowRequest
+        // DTOs
+        public sealed class BorrowRequest
         {
             public int SubscriptionId { get; set; }
             public List<int> BookIds { get; set; } = new();
         }
-
-        [HttpPost]
-        [Authorize(Roles = Roles.User)]
-        public async Task<IActionResult> Borrow([FromBody] BorrowRequest request)
-        {
-            await _loanService.BorrowAsync(request.SubscriptionId, request.BookIds);
-            return Ok();
-        }
-
-        public class AddItemsRequest
+        public sealed class AddItemsRequest
         {
             public List<int> BookIds { get; set; } = new();
         }
-
-        [HttpPost("{loanId}/items")]
-        [Authorize(Roles = Roles.User)]
-        public async Task<IActionResult> AddItems(int loanId, [FromBody] AddItemsRequest request)
+        public sealed class ExtendLoanRequest
         {
-            await _loanService.AddItemsAsync(loanId, request.BookIds);
-            return Ok();
+            public DateTime? NewDueDate { get; set; }
+            public int? DaysToExtend { get; set; }
+        }
+        public sealed record LoanItemResponse(int LoanItemID, int BookID, DateTime DueDate, DateTime? ReturnedDate, string Status);
+        public sealed record LoanResponse(int LoanID, int SubscriptionID, DateTime LoanDate, DateTime? ReturnDate, string Status, IEnumerable<LoanItemResponse> Items);
+
+        private bool TryGetUserId(out int userId)
+        {
+            var id =
+                User.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
+                User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+            return int.TryParse(id, out userId);
         }
 
-        [HttpPost("items/{loanItemId}/return")]
-        [Authorize(Roles = Roles.User)]
-        public async Task<IActionResult> ReturnItem(int loanItemId)
-        {
-            await _loanService.ReturnAsync(loanItemId);
-            return Ok();
-        }
-
-        [HttpGet("history")]
-        [Authorize(Roles = Roles.User)]
-        public async Task<IActionResult> GetHistory()
-        {
-            var userId = int.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? "0");
-            var loans = await _loanService.GetLoanHistoryAsync(userId);
-            return Ok(loans);
-        }
-
-        [HttpGet("active")]
-        [Authorize(Roles = Roles.User)]
-        public async Task<IActionResult> GetActive()
-        {
-            var userId = int.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? "0");
-            var loans = await _loanService.GetActiveLoansAsync(userId);
-            return Ok(loans);
-        }
-
-        public record LoanItemResponse(int LoanItemID, int BookID, DateTime DueDate, DateTime? ReturnedDate, string Status);
-        public record LoanResponse(int LoanID, int SubscriptionID, DateTime LoanDate, DateTime? ReturnDate, string Status, IEnumerable<LoanItemResponse> Items);
-
-        [HttpGet("{loanId}")]
-        [Authorize(Roles = Roles.User)]
-        public async Task<IActionResult> GetLoan(int loanId)
-        {
-            var userId = int.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? "0");
-            var loan = await _loanService.GetLoanAsync(loanId, userId);
-            if (loan == null) return NotFound();
-            var response = new LoanResponse(
+        private static LoanResponse MapLoan(Loan loan) =>
+            new(
                 loan.LoanID,
                 loan.SubscriptionID,
                 loan.LoanDate,
                 loan.ReturnDate,
                 loan.Status,
-                loan.LoanItems.Select(li => new LoanItemResponse(li.LoanItemID, li.BookID, li.DueDate, li.ReturnedDate, li.Status))
+                loan.LoanItems.Select(li =>
+                    new LoanItemResponse(li.LoanItemID, li.BookID, li.DueDate, li.ReturnedDate, li.Status))
             );
+
+        // POST /api/loans  -> return created loan
+        [HttpPost]
+        public async Task<IActionResult> Borrow([FromBody] BorrowRequest request)
+        {
+            if (!TryGetUserId(out _)) return Unauthorized();
+            var loan = await _loanService.BorrowAsync(request.SubscriptionId, request.BookIds);
+            return CreatedAtAction(nameof(GetLoan), new { loanId = loan.LoanID }, MapLoan(loan));
+        }
+
+        // POST /api/loans/{loanId}/items -> return updated loan
+        [HttpPost("{loanId:int}/items")]
+        public async Task<IActionResult> AddItems([FromRoute] int loanId, [FromBody] AddItemsRequest request)
+        {
+            if (!TryGetUserId(out _)) return Unauthorized();
+            var loan = await _loanService.AddItemsAsync(loanId, request.BookIds);
+            return Ok(MapLoan(loan));
+        }
+
+        // POST /api/loans/items/{loanItemId}/return -> return updated loan item
+        [HttpPost("items/{loanItemId:int}/return")]
+        public async Task<IActionResult> ReturnItem([FromRoute] int loanItemId)
+        {
+            if (!TryGetUserId(out _)) return Unauthorized();
+            var item = await _loanService.ReturnAsync(loanItemId);
+            var response = new LoanItemResponse(item.LoanItemID, item.BookID, item.DueDate, item.ReturnedDate, item.Status);
             return Ok(response);
         }
 
-        public class ExtendLoanRequest
+        // GET /api/loans/history
+        [HttpGet("history")]
+        public async Task<IActionResult> GetHistory()
         {
-            public DateTime? NewDueDate { get; set; }
-            public int? DaysToExtend { get; set; }
+            if (!TryGetUserId(out var userId)) return Unauthorized();
+            var loans = await _loanService.GetLoanHistoryAsync(userId);
+            return Ok(loans.Select(MapLoan));
         }
 
-        [HttpPut("{loanId}/extend")]
-        [Authorize(Roles = Roles.User)]
-        public async Task<IActionResult> ExtendLoan(int loanId, [FromBody] ExtendLoanRequest request)
+        // GET /api/loans/active
+        [HttpGet("active")]
+        public async Task<IActionResult> GetActive()
         {
-            var userId = int.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? "0");
-            await _loanService.ExtendLoanAsync(loanId, userId, request.NewDueDate, request.DaysToExtend);
-            return Ok();
+            if (!TryGetUserId(out var userId)) return Unauthorized();
+            var loans = await _loanService.GetActiveLoansAsync(userId);
+            return Ok(loans.Select(MapLoan));
+        }
+
+        // GET /api/loans/{loanId}
+        [HttpGet("{loanId:int}")]
+        public async Task<IActionResult> GetLoan([FromRoute] int loanId)
+        {
+            if (!TryGetUserId(out var userId)) return Unauthorized();
+            var loan = await _loanService.GetLoanAsync(loanId, userId);
+            if (loan is null) return NotFound();
+            return Ok(MapLoan(loan));
+        }
+
+        // PUT /api/loans/{loanId}/extend -> return updated loan
+        [HttpPut("{loanId:int}/extend")]
+        public async Task<IActionResult> ExtendLoan([FromRoute] int loanId, [FromBody] ExtendLoanRequest request)
+        {
+            if (!TryGetUserId(out var userId)) return Unauthorized();
+            var loan = await _loanService.ExtendLoanAsync(loanId, userId, request.NewDueDate, request.DaysToExtend);
+            return Ok(MapLoan(loan));
         }
     }
 }

@@ -18,6 +18,10 @@ namespace BookLibwithSub.Repo.repository
 
         public async Task<int> CountLoanItemsAsync(int subscriptionId, DateTime start, DateTime end)
         {
+            // Ensure UTC before hitting timestamptz columns
+            if (start.Kind != DateTimeKind.Utc) start = DateTime.SpecifyKind(start, DateTimeKind.Utc);
+            if (end.Kind != DateTimeKind.Utc) end = DateTime.SpecifyKind(end, DateTimeKind.Utc);
+
             return await _context.LoanItems
                 .Where(li => li.Loan.SubscriptionID == subscriptionId &&
                              li.Loan.LoanDate >= start && li.Loan.LoanDate < end)
@@ -26,10 +30,27 @@ namespace BookLibwithSub.Repo.repository
 
         public async Task AddAsync(Loan loan)
         {
+            // Defensive: normalize any incoming dates to UTC
+            if (loan.LoanDate.Kind != DateTimeKind.Utc)
+                loan.LoanDate = DateTime.SpecifyKind(loan.LoanDate, DateTimeKind.Utc);
+            if (loan.ReturnDate.HasValue && loan.ReturnDate.Value.Kind != DateTimeKind.Utc)
+                loan.ReturnDate = DateTime.SpecifyKind(loan.ReturnDate.Value, DateTimeKind.Utc);
+
+            foreach (var item in loan.LoanItems)
+            {
+                if (item.DueDate.Kind != DateTimeKind.Utc)
+                    item.DueDate = DateTime.SpecifyKind(item.DueDate, DateTimeKind.Utc);
+                if (item.ReturnedDate.HasValue && item.ReturnedDate.Value.Kind != DateTimeKind.Utc)
+                    item.ReturnedDate = DateTime.SpecifyKind(item.ReturnedDate.Value, DateTimeKind.Utc);
+            }
+
             await using var tx = await _context.Database.BeginTransactionAsync();
             foreach (var item in loan.LoanItems)
             {
-                var affected = await _context.Database.ExecuteSqlInterpolatedAsync($"UPDATE Books SET AvailableCopies = AvailableCopies - 1 WHERE BookID = {item.BookID} AND AvailableCopies > 0");
+                var affected = await _context.Database.ExecuteSqlInterpolatedAsync(
+                    $@"UPDATE ""Books"" 
+                       SET ""AvailableCopies"" = ""AvailableCopies"" - 1 
+                       WHERE ""BookID"" = {item.BookID} AND ""AvailableCopies"" > 0");
                 if (affected == 0)
                     throw new InvalidOperationException($"Book {item.BookID} not available");
             }
@@ -50,10 +71,22 @@ namespace BookLibwithSub.Repo.repository
 
         public async Task AddItemsAsync(Loan loan, IEnumerable<LoanItem> items)
         {
+            // Defensive: normalize any incoming dates to UTC
+            foreach (var item in items)
+            {
+                if (item.DueDate.Kind != DateTimeKind.Utc)
+                    item.DueDate = DateTime.SpecifyKind(item.DueDate, DateTimeKind.Utc);
+                if (item.ReturnedDate.HasValue && item.ReturnedDate.Value.Kind != DateTimeKind.Utc)
+                    item.ReturnedDate = DateTime.SpecifyKind(item.ReturnedDate.Value, DateTimeKind.Utc);
+            }
+
             await using var tx = await _context.Database.BeginTransactionAsync();
             foreach (var item in items)
             {
-                var affected = await _context.Database.ExecuteSqlInterpolatedAsync($"UPDATE Books SET AvailableCopies = AvailableCopies - 1 WHERE BookID = {item.BookID} AND AvailableCopies > 0");
+                var affected = await _context.Database.ExecuteSqlInterpolatedAsync(
+                    $@"UPDATE ""Books"" 
+                       SET ""AvailableCopies"" = ""AvailableCopies"" - 1 
+                       WHERE ""BookID"" = {item.BookID} AND ""AvailableCopies"" > 0");
                 if (affected == 0)
                     throw new InvalidOperationException($"Book {item.BookID} not available");
                 item.LoanID = loan.LoanID;
@@ -79,7 +112,10 @@ namespace BookLibwithSub.Repo.repository
             item.ReturnedDate = DateTime.UtcNow;
             item.Status = "Returned";
 
-            var affected = await _context.Database.ExecuteSqlInterpolatedAsync($"UPDATE Books SET AvailableCopies = AvailableCopies + 1 WHERE BookID = {item.BookID}");
+            var affected = await _context.Database.ExecuteSqlInterpolatedAsync(
+                $@"UPDATE ""Books"" 
+                   SET ""AvailableCopies"" = ""AvailableCopies"" + 1 
+                   WHERE ""BookID"" = {item.BookID}");
             if (affected == 0)
                 throw new InvalidOperationException($"Book {item.BookID} not found");
 
@@ -102,7 +138,7 @@ namespace BookLibwithSub.Repo.repository
         {
             return await _context.Loans
                 .Where(l => l.Subscription.UserID == userId &&
-                             l.LoanItems.Any(li => li.Status != "Returned"))
+                            l.LoanItems.Any(li => li.Status != "Returned"))
                 .Include(l => l.LoanItems.Where(li => li.Status != "Returned"))
                 .ToListAsync();
         }
@@ -112,9 +148,15 @@ namespace BookLibwithSub.Repo.repository
             foreach (var item in loan.LoanItems.Where(li => li.Status != "Returned"))
             {
                 if (newDueDate.HasValue)
-                    item.DueDate = newDueDate.Value;
+                {
+                    var nd = newDueDate.Value;
+                    if (nd.Kind != DateTimeKind.Utc) nd = DateTime.SpecifyKind(nd, DateTimeKind.Utc);
+                    item.DueDate = nd;
+                }
                 else if (daysToExtend.HasValue)
-                    item.DueDate = item.DueDate.AddDays(daysToExtend.Value);
+                {
+                    item.DueDate = item.DueDate.AddDays(daysToExtend.Value); 
+                }
             }
 
             await _context.SaveChangesAsync();

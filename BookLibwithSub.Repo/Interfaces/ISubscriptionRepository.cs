@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using BookLibwithSub.Repo.Entities;
 
@@ -10,5 +11,7 @@ namespace BookLibwithSub.Repo.Interfaces
         Task<Subscription?> GetLatestByUserAsync(int userId);
         Task AddAsync(Subscription subscription);
         Task UpdateAsync(Subscription subscription);
+
+        Task ActivateAsync(int subscriptionId, DateTime startUtc, DateTime endUtc);
     }
 }

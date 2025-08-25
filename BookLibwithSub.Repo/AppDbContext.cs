@@ -1,5 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
-using BookLibwithSub.Repo.Entities;
+﻿using BookLibwithSub.Repo.Entities;
+using BookLibwithSub.Repo.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 namespace BookLibwithSub.Repo
 {
@@ -19,10 +20,10 @@ namespace BookLibwithSub.Repo
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.UseUtcDateTimes();
 
             modelBuilder.Entity<User>(entity =>
             {
-
                 entity.HasIndex(u => u.Email).IsUnique();
                 entity.HasIndex(u => u.Username).IsUnique();
 
@@ -59,7 +60,6 @@ namespace BookLibwithSub.Repo
 
             modelBuilder.Entity<SubscriptionPlan>(entity =>
             {
-
                 entity.Property(p => p.PlanName)
                     .IsRequired()
                     .HasMaxLength(100);
@@ -96,8 +96,15 @@ namespace BookLibwithSub.Repo
                     .HasForeignKey(s => s.SubscriptionPlanID)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                entity.Property(s => s.StartDate).IsRequired();
-                entity.Property(s => s.EndDate).IsRequired();
+                // ✅ store as timestamptz
+                entity.Property(s => s.StartDate)
+                    .HasColumnType("timestamp with time zone")
+                    .IsRequired();
+
+                entity.Property(s => s.EndDate)
+                    .HasColumnType("timestamp with time zone")
+                    .IsRequired();
+
                 entity.Property(s => s.Status)
                     .IsRequired()
                     .HasMaxLength(50);
@@ -129,7 +136,6 @@ namespace BookLibwithSub.Repo
                 });
             });
 
-
             modelBuilder.Entity<Loan>(entity =>
             {
                 entity.HasOne(l => l.Subscription)
@@ -137,8 +143,15 @@ namespace BookLibwithSub.Repo
                     .HasForeignKey(l => l.SubscriptionID)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                entity.Property(l => l.LoanDate).IsRequired();
-                entity.Property(l => l.ReturnDate).IsRequired(false);
+                // ✅ store as timestamptz
+                entity.Property(l => l.LoanDate)
+                    .HasColumnType("timestamp with time zone")
+                    .IsRequired();
+
+                entity.Property(l => l.ReturnDate)
+                    .HasColumnType("timestamp with time zone")
+                    .IsRequired(false);
+
                 entity.Property(l => l.Status)
                     .IsRequired()
                     .HasMaxLength(50);
@@ -156,8 +169,15 @@ namespace BookLibwithSub.Repo
                     .HasForeignKey(li => li.BookID)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                entity.Property(li => li.DueDate).IsRequired();
-                entity.Property(li => li.ReturnedDate).IsRequired(false);
+                // ✅ store as timestamptz
+                entity.Property(li => li.DueDate)
+                    .HasColumnType("timestamp with time zone")
+                    .IsRequired();
+
+                entity.Property(li => li.ReturnedDate)
+                    .HasColumnType("timestamp with time zone")
+                    .IsRequired(false);
+
                 entity.Property(li => li.Status)
                     .IsRequired()
                     .HasMaxLength(50);

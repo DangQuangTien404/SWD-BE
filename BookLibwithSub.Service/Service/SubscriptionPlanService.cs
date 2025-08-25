@@ -22,6 +22,14 @@ namespace BookLibwithSub.Service.Service
 
         public async Task<SubscriptionPlan> AddAsync(SubscriptionPlan plan)
         {
+            var name = plan.PlanName?.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+                throw new InvalidOperationException("Plan name is required.");
+
+            if (await _repo.ExistsByNameAsync(name))
+                throw new InvalidOperationException("A plan with this name already exists.");
+
+            plan.PlanName = name;
             await _repo.AddAsync(plan);
             return plan;
         }
@@ -37,7 +45,14 @@ namespace BookLibwithSub.Service.Service
             if (existing == null)
                 throw new InvalidOperationException("Subscription plan not found");
 
-            existing.PlanName = plan.PlanName;
+            var name = plan.PlanName?.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+                throw new InvalidOperationException("Plan name is required.");
+
+            if (await _repo.ExistsByNameAsync(name, id))
+                throw new InvalidOperationException("A plan with this name already exists.");
+
+            existing.PlanName = name;
             existing.DurationDays = plan.DurationDays;
             existing.MaxPerDay = plan.MaxPerDay;
             existing.MaxPerMonth = plan.MaxPerMonth;

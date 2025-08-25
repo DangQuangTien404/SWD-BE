@@ -7,11 +7,11 @@ namespace BookLibwithSub.Service.Interfaces
 {
     public interface ILoanService
     {
-        Task BorrowAsync(int subscriptionId, IEnumerable<int> bookIds);
-        Task AddItemsAsync(int loanId, IEnumerable<int> bookIds);
-        Task ReturnAsync(int loanItemId);
+        Task<Loan> BorrowAsync(int subscriptionId, IEnumerable<int> bookIds);
+        Task<Loan> AddItemsAsync(int loanId, IEnumerable<int> bookIds);
+        Task<LoanItem> ReturnAsync(int loanItemId);
         Task<Loan?> GetLoanAsync(int loanId, int userId);
-        Task ExtendLoanAsync(int loanId, int userId, DateTime? newDueDate, int? daysToExtend);
+        Task<Loan> ExtendLoanAsync(int loanId, int userId, DateTime? newDueDate, int? daysToExtend);
         Task<IEnumerable<Loan>> GetLoanHistoryAsync(int userId);
         Task<IEnumerable<Loan>> GetActiveLoansAsync(int userId);
     }
