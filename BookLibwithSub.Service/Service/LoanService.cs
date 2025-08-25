@@ -65,7 +65,7 @@ namespace BookLibwithSub.Service.Service
 
             await _loanRepo.AddAsync(loan);
 
-            // EF populated LoanID; re-read with items & plan
+            
             var loaded = await _loanRepo.GetByIdAsync(loan.LoanID)
                          ?? throw new InvalidOperationException("Created loan not found");
             return loaded;
@@ -112,7 +112,7 @@ namespace BookLibwithSub.Service.Service
 
             await _loanRepo.AddItemsAsync(loan, items);
 
-            // Reload with fresh items
+            
             var loaded = await _loanRepo.GetByIdAsync(loan.LoanID)
                          ?? throw new InvalidOperationException("Updated loan not found");
             return loaded;

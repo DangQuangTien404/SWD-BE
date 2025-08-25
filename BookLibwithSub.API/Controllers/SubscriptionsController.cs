@@ -2,7 +2,7 @@ using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using BookLibwithSub.Repo.Interfaces;            // <-- added
+using BookLibwithSub.Repo.Interfaces;            
 using BookLibwithSub.Service.Constants;
 using BookLibwithSub.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -19,19 +19,19 @@ namespace BookLibwithSub.API.Controllers
         private readonly ISubscriptionService _subscriptionService;
         private readonly IZaloPayService _zaloPayService;
 
-        // NEW: use repo to flip status & dates
+        
         private readonly ISubscriptionRepository _subscriptionRepo;
 
         public SubscriptionsController(
             ISubscriptionPlanService planService,
             ISubscriptionService subscriptionService,
             IZaloPayService zaloPayService,
-            ISubscriptionRepository subscriptionRepo)   // <-- added
+            ISubscriptionRepository subscriptionRepo)   
         {
             _planService = planService;
             _subscriptionService = subscriptionService;
             _zaloPayService = zaloPayService;
-            _subscriptionRepo = subscriptionRepo;       // <-- added
+            _subscriptionRepo = subscriptionRepo;       
         }
 
         public class PurchaseRequest { public int PlanId { get; set; } }
@@ -46,14 +46,14 @@ namespace BookLibwithSub.API.Controllers
 
             try
             {
-                // 1) create the transaction (your current behavior)
+                
                 var transaction = await _subscriptionService.PurchaseAsync(userIdOpt.Value, request.PlanId);
 
-                // 2) create ZaloPay order (your current behavior)
+                
                 var order = await _zaloPayService.CreateOrderAsync(transaction.TransactionID, userIdOpt.Value);
 
-                // 3) IMMEDIATELY ACTIVATE the most recent subscription for this user
-                //    (we fetch it with plan to compute the end date correctly)
+                
+                
                 var latest = await _subscriptionRepo.GetLatestByUserAsync(userIdOpt.Value);
                 if (latest != null)
                 {
@@ -66,7 +66,7 @@ namespace BookLibwithSub.API.Controllers
                     }
                 }
 
-                // 4) keep returning your original payload
+                
                 return Ok(new { transactionId = transaction.TransactionID, order });
             }
             catch (InvalidOperationException ex)
@@ -100,13 +100,13 @@ namespace BookLibwithSub.API.Controllers
 
             try
             {
-                // 1) create renewal transaction (your current behavior)
+                
                 var transaction = await _subscriptionService.RenewAsync(userIdOpt.Value);
 
-                // 2) create ZaloPay order (your current behavior)
+                
                 var order = await _zaloPayService.CreateOrderAsync(transaction.TransactionID, userIdOpt.Value);
 
-                // 3) IMMEDIATELY ACTIVATE (or re-activate) with plan duration
+                
                 var latest = await _subscriptionRepo.GetLatestByUserAsync(userIdOpt.Value);
                 if (latest != null)
                 {

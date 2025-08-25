@@ -15,11 +15,11 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// -------------------- Database --------------------
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// -------------------- DI: Repos & Services --------------------
+
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
@@ -38,12 +38,12 @@ builder.Services.AddScoped<ILoanRepository, LoanRepository>();
 builder.Services.AddScoped<ILoanService, LoanService>();
 builder.Services.AddScoped<IBookRepository, BookRepository>();
 
-// -------------------- ZaloPay --------------------
+
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IZaloPayService, ZaloPayService>();
 builder.Services.Configure<ZaloPayOptions>(builder.Configuration.GetSection("ZaloPay"));
 
-// -------------------- CORS --------------------
+
 const string CorsPolicy = "AppCors";
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins")
     .Get<string[]>() ?? new[]
@@ -64,7 +64,7 @@ builder.Services.AddCors(o =>
     });
 });
 
-// -------------------- JWT --------------------
+
 var jwtOptions = new JwtOptions();
 builder.Configuration.GetSection("Jwt").Bind(jwtOptions);
 jwtOptions.Key = Environment.GetEnvironmentVariable("JWT__KEY") ?? jwtOptions.Key;
@@ -97,14 +97,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// -------------------- Controllers & JSON --------------------
+
 builder.Services.AddControllers().AddJsonOptions(o =>
 {
     o.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
     o.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 });
 
-// -------------------- Swagger --------------------
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -126,7 +126,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// -------------------- Pipeline --------------------
+
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();

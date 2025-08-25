@@ -1,6 +1,5 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
 VisualStudioVersion = 17.14.36327.8
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BookLibwithSub.API", "BookLibwithSub.API\BookLibwithSub.API.csproj", "{94A5F05C-BED8-439E-8409-9B7ED2A82F8C}"

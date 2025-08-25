@@ -17,7 +17,7 @@ namespace BookLibwithSub.Service.Service
 
         public async Task<Book> CreateAsync(Book entity)
         {
-            // business validations
+            
             if (await _repo.ExistsByIsbnAsync(entity.ISBN))
                 throw new System.InvalidOperationException("ISBN already exists");
 
@@ -41,7 +41,7 @@ namespace BookLibwithSub.Service.Service
             if (updated.TotalCopies < 0 || updated.AvailableCopies < 0 || updated.AvailableCopies > updated.TotalCopies)
                 throw new System.InvalidOperationException("Invalid copies numbers");
 
-            // copy fields
+            
             existing.Title = updated.Title;
             existing.AuthorName = updated.AuthorName;
             existing.ISBN = updated.ISBN;
@@ -49,7 +49,7 @@ namespace BookLibwithSub.Service.Service
             existing.PublishedYear = updated.PublishedYear;
             existing.TotalCopies = updated.TotalCopies;
             existing.AvailableCopies = updated.AvailableCopies;
-            existing.CoverImageUrl = updated.CoverImageUrl; // URL only
+            existing.CoverImageUrl = updated.CoverImageUrl; 
 
             await _repo.UpdateAsync(existing);
             await _repo.SaveAsync();

@@ -11,7 +11,7 @@ namespace BookLibwithSub.Repo
         private readonly AppDbContext _context;
         public UserRepository(AppDbContext context) => _context = context;
 
-        // ---------- READS: No tracking for query-only paths ----------
+        
         public Task<List<User>> GetAllAsync() =>
             _context.Users
                 .AsNoTracking()
@@ -37,12 +37,12 @@ namespace BookLibwithSub.Repo
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.CurrentToken == token);
 
-        // ---------- READ (Tracked): for update scenarios ----------
+        
         public Task<User?> GetTrackedByIdAsync(int userId) =>
             _context.Users
                 .FirstOrDefaultAsync(u => u.UserID == userId);
 
-        // ---------- WRITES ----------
+        
         public async Task AddAsync(User user)
         {
             _context.Users.Add(user);
@@ -51,7 +51,7 @@ namespace BookLibwithSub.Repo
 
         public async Task UpdateAsync(User user)
         {
-            // If the entity is detached, attach then mark modified
+            
             var entry = _context.Entry(user);
             if (entry.State == EntityState.Detached)
             {

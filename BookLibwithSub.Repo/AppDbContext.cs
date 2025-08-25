@@ -96,7 +96,7 @@ namespace BookLibwithSub.Repo
                     .HasForeignKey(s => s.SubscriptionPlanID)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                // ✅ store as timestamptz
+                
                 entity.Property(s => s.StartDate)
                     .HasColumnType("timestamp with time zone")
                     .IsRequired();
@@ -113,7 +113,7 @@ namespace BookLibwithSub.Repo
             modelBuilder.Entity<Book>(entity =>
             {
                 entity.HasKey(b => b.BookID);
-                entity.Property(b => b.BookID).UseIdentityByDefaultColumn(); // PostgreSQL
+                entity.Property(b => b.BookID).UseIdentityByDefaultColumn(); 
 
                 entity.Property(b => b.Title).IsRequired().HasMaxLength(255);
                 entity.Property(b => b.AuthorName).IsRequired().HasMaxLength(255);
@@ -126,7 +126,7 @@ namespace BookLibwithSub.Repo
                 entity.Property(b => b.TotalCopies).IsRequired();
                 entity.Property(b => b.AvailableCopies).IsRequired();
 
-                // only URL now
+                
                 entity.Property(b => b.CoverImageUrl).HasMaxLength(1000);
 
                 entity.ToTable(t =>
@@ -143,7 +143,7 @@ namespace BookLibwithSub.Repo
                     .HasForeignKey(l => l.SubscriptionID)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                // ✅ store as timestamptz
+                
                 entity.Property(l => l.LoanDate)
                     .HasColumnType("timestamp with time zone")
                     .IsRequired();
@@ -169,7 +169,7 @@ namespace BookLibwithSub.Repo
                     .HasForeignKey(li => li.BookID)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                // ✅ store as timestamptz
+                
                 entity.Property(li => li.DueDate)
                     .HasColumnType("timestamp with time zone")
                     .IsRequired();

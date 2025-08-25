@@ -18,7 +18,7 @@ namespace BookLibwithSub.Repo.repository
 
         public async Task<int> CountLoanItemsAsync(int subscriptionId, DateTime start, DateTime end)
         {
-            // Ensure UTC before hitting timestamptz columns
+            
             if (start.Kind != DateTimeKind.Utc) start = DateTime.SpecifyKind(start, DateTimeKind.Utc);
             if (end.Kind != DateTimeKind.Utc) end = DateTime.SpecifyKind(end, DateTimeKind.Utc);
 
@@ -30,7 +30,7 @@ namespace BookLibwithSub.Repo.repository
 
         public async Task AddAsync(Loan loan)
         {
-            // Defensive: normalize any incoming dates to UTC
+            
             if (loan.LoanDate.Kind != DateTimeKind.Utc)
                 loan.LoanDate = DateTime.SpecifyKind(loan.LoanDate, DateTimeKind.Utc);
             if (loan.ReturnDate.HasValue && loan.ReturnDate.Value.Kind != DateTimeKind.Utc)
@@ -71,7 +71,7 @@ namespace BookLibwithSub.Repo.repository
 
         public async Task AddItemsAsync(Loan loan, IEnumerable<LoanItem> items)
         {
-            // Defensive: normalize any incoming dates to UTC
+            
             foreach (var item in items)
             {
                 if (item.DueDate.Kind != DateTimeKind.Utc)
