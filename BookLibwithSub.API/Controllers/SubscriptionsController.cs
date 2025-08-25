@@ -52,12 +52,10 @@ namespace BookLibwithSub.API.Controllers
                 // 2) create ZaloPay order (your current behavior)
                 var order = await _zaloPayService.CreateOrderAsync(transaction.TransactionID, userIdOpt.Value);
 
-                // 3) IMMEDIATELY ACTIVATE the most recent subscription for this user
-                //    (we fetch it with plan to compute the end date correctly)
-                var latest = await _subscriptionRepo.GetLatestByUserAsync(userIdOpt.Value);
-                if (latest != null)
+                // 3) IMMEDIATELY ACTIVATE the subscription tied to this transaction
+                if (transaction.SubscriptionID.HasValue)
                 {
-                    var subWithPlan = await _subscriptionRepo.GetByIdWithPlanAsync(latest.SubscriptionID);
+                    var subWithPlan = await _subscriptionRepo.GetByIdWithPlanAsync(transaction.SubscriptionID.Value);
                     if (subWithPlan?.SubscriptionPlan != null)
                     {
                         var nowUtc = DateTime.UtcNow;
@@ -106,11 +104,10 @@ namespace BookLibwithSub.API.Controllers
                 // 2) create ZaloPay order (your current behavior)
                 var order = await _zaloPayService.CreateOrderAsync(transaction.TransactionID, userIdOpt.Value);
 
-                // 3) IMMEDIATELY ACTIVATE (or re-activate) with plan duration
-                var latest = await _subscriptionRepo.GetLatestByUserAsync(userIdOpt.Value);
-                if (latest != null)
+                // 3) IMMEDIATELY ACTIVATE (or re-activate) the renewed subscription
+                if (transaction.SubscriptionID.HasValue)
                 {
-                    var subWithPlan = await _subscriptionRepo.GetByIdWithPlanAsync(latest.SubscriptionID);
+                    var subWithPlan = await _subscriptionRepo.GetByIdWithPlanAsync(transaction.SubscriptionID.Value);
                     if (subWithPlan?.SubscriptionPlan != null)
                     {
                         var nowUtc = DateTime.UtcNow;
