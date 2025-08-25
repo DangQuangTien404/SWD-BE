@@ -22,9 +22,14 @@ namespace BookLibwithSub.Repo.repository
             if (start.Kind != DateTimeKind.Utc) start = DateTime.SpecifyKind(start, DateTimeKind.Utc);
             if (end.Kind != DateTimeKind.Utc) end = DateTime.SpecifyKind(end, DateTimeKind.Utc);
 
+            // Only count items that are currently borrowed. Items that have been
+            // returned shouldn't contribute to the daily/monthly borrowing limits.
+            // Checking ReturnedDate instead of Status is more resilient in case the
+            // status field isn't updated for some reason.
             return await _context.LoanItems
                 .Where(li => li.Loan.SubscriptionID == subscriptionId &&
-                             li.Loan.LoanDate >= start && li.Loan.LoanDate < end)
+                             li.Loan.LoanDate >= start && li.Loan.LoanDate < end &&
+                             li.ReturnedDate == null)
                 .CountAsync();
         }
 
